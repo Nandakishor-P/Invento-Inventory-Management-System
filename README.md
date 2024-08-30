@@ -1,6 +1,6 @@
 # Invento-Inventory-Management-System
 <div align="center">
-<h1> Invento Management System </h1> <a href="#"><img alt="language" src="https://user-images.githubusercontent.com/132539454/278971782-9453805e-e2e6-4d99-b1de-cf8fcd3e7105.svg"></a>
+<h1> Invento Management System </h1> <a href="#"><img alt="language" src="logo.jpeg"></a>
 </div>
 
 
