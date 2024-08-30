@@ -1,0 +1,9 @@
+Person(person_id, phone_no, name, email)
+Customer(person_id, customer_id) 
+Supplier(person_id, supplier_id)
+Product(product_id, product_name, price, Quantity)	
+Sales_Order(order_id, product_id order_date, customer_id)
+
+Supplies(supplier_id, product_id)
+place(customer_id, order_id, order_date)
+includes(order_id, product_id)

@@ -1,0 +1,238 @@
+
+Use of quantity in both product and inventory table 
+Initial Setup:
+When a new product is added to the system, its initial stock quantity is recorded in the product table.
+An entry is also made in the inventory table with the initial stock level.
+Updating Inventory:
+Sales: When a product is sold, the quantity in the inventory table is decreased accordingly.
+Restocking: When new stock is received from a supplier, the quantity in the inventory table is increased.
+Adjustments: Any manual adjustments (e.g., due to damage, returns) are made in the inventory table.
+
+_______________________________________________________________________________________________________________________________
+
+Table creation commands:
+
+CREATE TABLE person (
+    person_id integer NOT NULL DEFAULT nextval('person_person_id_seq'::regclass),
+    phone_no bigint,
+    name character varying(50),
+    email character varying(50),
+    password character varying NOT NULL,
+    CONSTRAINT person_pkey PRIMARY KEY (person_id),
+    CONSTRAINT unq UNIQUE (phone_no)
+);
+
+CREATE TABLE confirm_msg (
+    message_id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    message_text TEXT,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES sales_order(order_id)
+);
+
+CREATE TABLE inventory (
+    product_id VARCHAR PRIMARY KEY,
+    quantity INTEGER NOT NULL,
+    FOREIGN KEY (product_id) REFERENCES product(product_id)
+);
+
+CREATE TABLE order_details (
+    order_details_id VARCHAR PRIMARY KEY,
+    order_id INTEGER,
+    product_id VARCHAR,
+    supplier_id VARCHAR,
+    FOREIGN KEY (order_id) REFERENCES sales_order(order_id),
+    FOREIGN KEY (product_id) REFERENCES product(product_id),
+    FOREIGN KEY (supplier_id) REFERENCES supplier(supplier_id)
+);
+
+CREATE TABLE order_status (
+    status_id SERIAL PRIMARY KEY,
+    status_name VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE product (
+    product_id VARCHAR PRIMARY KEY,
+    product_name VARCHAR(50),
+    price NUMERIC
+);
+
+CREATE TABLE product_supplier (
+    product_id VARCHAR,
+    supplier_id VARCHAR,
+    PRIMARY KEY (product_id, supplier_id),
+    FOREIGN KEY (product_id) REFERENCES product(product_id),
+    FOREIGN KEY (supplier_id) REFERENCES supplier(supplier_id)
+);
+
+CREATE TABLE sales_order (
+    order_id SERIAL PRIMARY KEY,
+    customer_id VARCHAR,
+    order_date VARCHAR,
+    status_id INTEGER,
+    FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
+    FOREIGN KEY (status_id) REFERENCES order_status(status_id)
+);
+
+
+CREATE TABLE supplier (
+    supplier_id character varying NOT NULL DEFAULT nextval('supplier_supplier_id_seq'::regclass),
+    person_id integer,
+    password character varying(50) NOT NULL,
+    CONSTRAINT supplier_pkey PRIMARY KEY (supplier_id),
+    CONSTRAINT supplier_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(person_id)
+);
+
+ trigger is created after the table is created
+CREATE TRIGGER trigger_update_supplier_password
+AFTER INSERT ON supplier
+FOR EACH ROW
+EXECUTE FUNCTION update_supplier_password();
+
+
+
+CREATE TABLE customer (
+    customer_id character varying NOT NULL DEFAULT nextval('customer_customer_id_seq'::regclass),
+    person_id integer,
+    password character varying(50) NOT NULL,
+    CONSTRAINT customer_pkey PRIMARY KEY (customer_id),
+    CONSTRAINT customer_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(person_id)
+);
+
+ trigger created after the table is created
+CREATE TRIGGER trigger_update_customer_password
+AFTER INSERT ON customer
+FOR EACH ROW
+EXECUTE FUNCTION update_customer_password();
+
+
+_______________________________________________________________________________________________________
+Trigger function creation:
+
+CREATE OR REPLACE FUNCTION update_customer_password() 
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE customer 
+    SET password = (SELECT password FROM person WHERE person_id = NEW.person_id)
+    WHERE customer_id = NEW.customer_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION update_supplier_password() 
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE supplier 
+    SET password = (SELECT password FROM person WHERE person_id = NEW.person_id)
+    WHERE supplier_id = NEW.supplier_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+Trigger creation:
+ CREATE TRIGGER trigger_update_customer_password
+AFTER INSERT ON customer
+FOR EACH ROW
+EXECUTE FUNCTION update_customer_password();
+
+CREATE TRIGGER trigger_update_supplier_password
+AFTER INSERT ON supplier
+FOR EACH ROW
+EXECUTE FUNCTION update_supplier_password();
+
+
+
+
+
+____________________________________________________________________________________________________________________________________
+
+Insertion commands:
+To person table:
+INSERT INTO person (phone_no, name, email, password) VALUES
+('1234567890', 'Alice Johnson', 'alice@example.com', 'password1'),
+('2345678901', 'Bob Smith', 'bob@example.com', 'password2'),
+('3456789012', 'Carol White', 'carol@example.com', 'password3'),
+('4567890123', 'David Brown', 'david@example.com', 'password4'),
+('5678901234', 'Eve Black', 'eve@example.com', 'password5');
+INSERT INTO person (person_id, phone_no, name, email, password) VALUES
+(9, 7836452821, 'Manav M', 'manavm77@gmail.com', 'password9'),
+(10, 8729366892, 'Anugrah Nambiar', 'anugrah2003@gmail.com', 'password10');
+
+
+To customer table:
+INSERT INTO customer (person_id) VALUES
+(1),
+(2),
+(3);
+
+To supplier table:
+INSERT INTO supplier (person_id) VALUES
+(4),
+(5);
+
+Modifying the customer_id and suplpier_id:
+Project=# update supplier set supplier_id = 'S1' where person_id = 4;
+UPDATE 1
+Project=# update supplier set supplier_id = 'S2' where person_id = 5;
+UPDATE 1
+Project=# select * from supplier;
+ supplier_id | person_id
+-------------+-----------
+ S1          |         4
+ S2          |         5
+
+
+
+Project=# update customer set customer_id = 'C1' where person_id = 1;
+UPDATE 1
+Project=# update customer set customer_id = 'C2' where person_id = 2;
+UPDATE 1
+Project=# update customer set customer_id = 'C3' where person_id = 3;
+UPDATE 1
+Project=# select * from customer;
+ customer_id | person_id
+-------------+-----------
+ C1          |         1
+ C2          |         2
+ C3          |         3
+
+
+Insert into product table:
+INSERT INTO product VALUES
+('P1', 'Product A', 10.00, 100),
+('P2', 'Product B', 20.00, 200),
+('P3', 'Product C', 30.00, 300),
+('P4', 'Product D', 40.00, 400),
+('P5', 'Product E', 50.00, 500);
+
+Insert into inventory table:
+INSERT INTO inventory (product_id, quantity) VALUES
+('P1', 100),
+('P2', 200),
+('P3', 300),
+('P4', 400),
+('P5', 500);
+
+insert into sales_order table:
+INSERT INTO sales_orde VALUES
+(100, 'C1', '2024-06-20'),
+(101, 'C2', '2024-06-21'),
+(102, 'C3', '2024-06-22'),
+(103, 'C1', '2024-06-23'),
+(104, 'C2', '2024-06-24');
+
+insert into order_details table:
+INSERT INTO order_details VALUES
+('OD1', 100, 'P1', 'S1'),
+('OD2', 101, 'P2', 'S1'),
+('OD3', 102, 'P3', 'S2'),
+('OD4', 103, 'P4', 'S2'),
+('OD5', 104, 'P5', 'S1');
+
+insert into product_supplier table:
+INSERT INTO product_supplier (product_id, supplier_id) VALUES
+('P1', 'S1'),
+('P2', 'S1'),
+('P3', 'S2'),
+('P4', 'S2'),
+('P5', 'S1');
